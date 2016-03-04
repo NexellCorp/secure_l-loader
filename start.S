@@ -10,15 +10,28 @@
  * };
  */
 
-#define CPU0_CTRL_OFFSET		0x100
-#define CPU7_CTRL_OFFSET		0x800
-#define CPU0_RVBARADDR_OFFSET		0x158
-#define CPU7_RVBARADDR_OFFSET		0x858
+#define CPU_WARMRSTREQ_OFFSET		0x2AC
+#define CPU_WARMRSTREQ_CORE0		(1 << 0)
+#define CPU_WARMRSTREQ_CORE07		(0xFF << 0)
+#define CPU_WARMRSTREQ_CORE17		(0xFE << 0)
 
-#define CPU_CTRL_AARCH64_MODE		(1 << 7)
+#define CPU_CLUSTER0_CTRL_OFFSET	0x13C	/* TIEOFF79  register */
+#define CPU_CLUSTER1_CTRL_OFFSET	0x180	/* TIEOFF96  register */
 
-#define SC_PERIPH_CLKEN3		0x230
-#define SC_PERIPH_RSTDIS3		0x334
+#define CPU0_RVBARADDR_OFFSET		0x140	/* TIEOFF80  register */
+#define CPU1_RVBARADDR_OFFSET		0x148	/* TIEOFF82  register */
+#define CPU2_RVBARADDR_OFFSET		0x150	/* TIEOFF84  register */
+#define CPU3_RVBARADDR_OFFSET		0x158	/* TIEOFF86  register */
+#define CPU4_RVBARADDR_OFFSET		0x184	/* TIEOFF97  register */
+#define CPU5_RVBARADDR_OFFSET		0x18C	/* TIEOFF99  register */
+#define CPU6_RVBARADDR_OFFSET		0x194	/* TIEOFF101 register */
+#define CPU7_RVBARADDR_OFFSET		0x19C	/* TIEOFF103 register */
+#define CPUx_RVBARADDR_RANGE		0x8
+
+#define CPU_0_AARCH64_MODE		(0x1 << 12)	/* cpu 0     */
+#define CPU_0_3_AARCH64_MODE		(0xF << 12)	/* cpu 0 ~ 3 */
+#define CPU_4_7_AARCH64_MODE		(0xF << 4)	/* cpu 4 ~ 7 */
+
 	.global	_start
 _start:
 	b	reset
@@ -38,10 +51,20 @@ entries:
 	.align	7
 
 reset:
-	ldr	r8, =(0xf9800000 + 0x700)
+	ldr	r8, =(0x7fe00000 + 0x700)
 	str	r0, [r8]		@ download mode (1:usb,2:uart,0:boot)
 
-	ldr	r4, =0xf6504000		@ ACPU_CTRL register base
+	@ copy fip image
+	ldr	r0, =(0x7fc00000)	@ src
+	ldr	r1, =(0x40000000)	@ dst
+	ldr	r2, =(0x7fe00000)	@ end of src
+copy_loop_text:
+	ldmia	r0!, {r3-r10}
+	stmia	r1!, {r3-r10}
+	cmp	r0, r2
+	ble	copy_loop_text
+
+	ldr	r4, =0xC0011000		@ TIEOFF register base
 	@ set RVBAR for cpu0
 	ldr	r5, =CPU0_RVBARADDR_OFFSET
 	ldr	r6, =LLOADER_BL1_BIN
@@ -52,42 +75,11 @@ reset:
 	cmp	r0, r6
 	bne	1b
 
-	mov	r5, #CPU0_CTRL_OFFSET
-	mov	r6, #CPU7_CTRL_OFFSET
-2:
-	ldr	r0, [r4, r5]		@ Load ACPU_SC_CPUx_CTRL
-	orr	r0, r0, #CPU_CTRL_AARCH64_MODE
-	str	r0, [r4, r5]		@ Save to ACPU_SC_CPUx_CTRL
-	ldr	r0, [r4, r5]
-
-	add	r5, r5, #0x100		@ Iterate ACPU_SC_CPUx_CTRL
-	cmp	r5, r6
-	ble	2b
-
-	/*
-	 * Prepare UART2 & UART3 without baud rate initialization.
-	 * So always output on UART0 in l-loader.
-	 */
-	ldr	r4, =0xf70100e0		@ UART2_RXD IOMG register
-	mov	r0, #0
-	str	r0, [r4]
-	str	r0, [r4, #4]		@ UART2_TXD IOMG register
-	ldr	r0, [r4]
-
-	ldr	r4, =0xf7010188		@ UART3_RXD IOMG register
-	mov	r0, #1
-	str	r0, [r4]
-	str	r0, [r4, #4]		@ UART3_TXD IOMG register
-	ldr	r1, [r4]
-
-	ldr	r4, =0xf7030000		@ PERI_CTRL register base
-	@ By default, CLK_TXCO is the parent of CLK_UART3 in SC_CLK_SEL0
-
-	ldr	r5, =SC_PERIPH_RSTDIS3	@ unreset
-	ldr	r6, =SC_PERIPH_CLKEN3	@ enable PCLK
-	mov	r0, #(3 << 6)		@ bit'6' & bit'7' (UART2 & UART3)
-	str	r0, [r4, r5]
-	str	r0, [r4, r6]
+	@ set AARCH64 mode
+	mov	r5, #CPU_CLUSTER0_CTRL_OFFSET
+	ldr	r0, [r4, r5]		@ Load TIEOFF79_REG
+	orr	r0, r0, #CPU_0_AARCH64_MODE
+	str	r0, [r4, r5]		@ Save to TIEOFF79_REG
 
 	@ dump log message
 	adr	r0, str_aarch64
@@ -99,9 +91,18 @@ reset:
 	mov	r0, #'\n'
 	bl	printch
 
-	@ execute warm reset to switch aarch64
-	mov	r2, #3
+	@ switch to aarch64
+//	mov	r2, #3
+	mov	r2, #1
 	mcr	p15, 0, r2, c12, c0, 2
+
+	@ execute warm reset to switch aarch64
+	ldr	r4, =0xC0010000		@ Clock & Power register base
+	mov	r5, #CPU_WARMRSTREQ_OFFSET
+	ldr	r0, [r4, r5]		@ Load CPU_WARMRSTREQ register
+	orr	r0, r0, #CPU_WARMRSTREQ_CORE0
+	str	r0, [r4, r5]		@ Save to CPU_WARMRSTREQ register
+
 	wfi
 panic:
 	b	panic
