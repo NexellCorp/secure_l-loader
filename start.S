@@ -81,6 +81,7 @@ copy_loop_text:
 	orr	r0, r0, #CPU_0_AARCH64_MODE
 	str	r0, [r4, r5]		@ Save to TIEOFF79_REG
 
+#ifdef DEBUG_ON
 	@ dump log message
 	adr	r0, str_aarch64
 	bl	printascii
@@ -90,6 +91,7 @@ copy_loop_text:
 	bl	printch
 	mov	r0, #'\n'
 	bl	printch
+#endif
 
 	@ switch to aarch64
 //	mov	r2, #3
