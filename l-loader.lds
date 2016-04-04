@@ -7,7 +7,7 @@ OUTPUT_ARCH(arm)
 ENTRY(_start)
 SECTIONS
 {
-	. = 0x7fe00800;
+	. = 0xbfe00800;
 	LLOADER_START = .;
 
 	.text :
@@ -28,5 +28,5 @@ SECTIONS
 		*(.bss)
 	}
 
-	LLOADER_BL1_BIN = 0x7fe01000;
+	LLOADER_BL1_BIN = 0xbfe01000;
 }

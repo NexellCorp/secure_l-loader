@@ -51,13 +51,13 @@ entries:
 	.align	7
 
 reset:
-	ldr	r8, =(0x7fe00000 + 0x700)
+	ldr	r8, =(0xbfe00000 + 0x700)
 	str	r0, [r8]		@ download mode (1:usb,2:uart,0:boot)
 
 	@ copy fip image
-	ldr	r0, =(0x7fc00000)	@ src
+	ldr	r0, =(0xbfc00000)	@ src
 	ldr	r1, =(0x40000000)	@ dst
-	ldr	r2, =(0x7fe00000)	@ end of src
+	ldr	r2, =(0xbfe00000)	@ end of src
 copy_loop_text:
 	ldmia	r0!, {r3-r10}
 	stmia	r1!, {r3-r10}
