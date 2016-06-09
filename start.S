@@ -56,16 +56,6 @@ reset:
 	ldr	r8, =(PLAT_SECURE_BASE + 0x700)
 	str	r0, [r8]		@ download mode (1:usb,2:uart,0:boot)
 
-	@ copy fip image
-	ldr	r0, =(PLAT_FIP_BASE)	@ src
-	ldr	r1, =(PLAT_FLASH_BASE)	@ dst
-	ldr	r2, =(PLAT_SECURE_BASE)	@ end of src
-copy_loop_text:
-	ldmia	r0!, {r3-r10}
-	stmia	r1!, {r3-r10}
-	cmp	r0, r2
-	ble	copy_loop_text
-
 	ldr	r4, =0xC0011000		@ TIEOFF register base
 	@ set RVBAR for cpu0
 	ldr	r5, =CPU0_RVBARADDR_OFFSET
