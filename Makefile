@@ -44,5 +44,6 @@ ptable.img:
 	sh generate_ptable.sh
 	python gen_loader.py -o $@ --img_prm_ptable=prm_ptable.img --img_sec_ptable=sec_ptable.img
 
+.PHONY: clean
 clean:
 	rm -f l-loader.lds *.o *.img l-loader.bin
