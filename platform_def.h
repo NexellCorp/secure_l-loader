@@ -5,6 +5,8 @@
 #define PLAT_DRAM_SZ			0x80000000
 #elif defined(PLAT_DRAM_SIZE) && PLAT_DRAM_SIZE == 512
 #define PLAT_DRAM_SZ			0x20000000
+#elif defined(PLAT_DRAM_SIZE) && PLAT_DRAM_SIZE == 256
+#define PLAT_DRAM_SZ			0x10000000
 #else
 #define PLAT_DRAM_SZ			0x40000000
 #endif
